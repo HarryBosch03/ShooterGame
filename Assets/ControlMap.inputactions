@@ -24,12 +24,12 @@
                     "initialStateCheck": false
                 },
                 {
-                    "name": "Slam",
+                    "name": "Sprint",
                     "type": "Button",
-                    "id": "4604321f-70f8-498f-b82e-535fd9398255",
+                    "id": "f650a1e3-977c-4d72-8891-8446b0157695",
                     "expectedControlType": "Button",
                     "processors": "",
-                    "interactions": "",
+                    "interactions": "Press(behavior=2)",
                     "initialStateCheck": false
                 }
             ],
@@ -102,12 +102,12 @@
                 },
                 {
                     "name": "",
-                    "id": "1ef2955f-0f5a-480c-a0de-be87bd5b2de7",
-                    "path": "<Keyboard>/leftCtrl",
+                    "id": "96b8b0cd-bfd6-4ed0-b171-361d057de37b",
+                    "path": "<Keyboard>/leftShift",
                     "interactions": "",
                     "processors": "",
                     "groups": "",
-                    "action": "Slam",
+                    "action": "Sprint",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }

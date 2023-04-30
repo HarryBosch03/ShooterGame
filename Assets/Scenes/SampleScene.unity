@@ -1990,15 +1990,25 @@ MonoBehaviour:
     maxSpeed: 8
     accelerationTime: 0.1
     airAccelerationPenalty: 0.2
+    sprintSpeedScale: 2
+    sprintFovScale: 0.8
     jumpHeight: 2
     jumpGravity: 3
     fallingGravity: 3
     groundTestDistance: 1
     groundTestSkin: 0.3
     groundTestRadius: 0.4
-    groundTestMaxSlope: 46
+    groundTestMaxSlope: 35
+    hipWidth: 0.3
+    footSize: 0.3
+    stepDistance: 1.4
   camera:
     mouseSensitivity: 0.3
+    baseFov: 90
+    fovSmoothTime: 0.1
+    shakeAmplitude: {x: 1, y: 1, z: 1.2}
+    shakeFrequency: 1.2
+    shakeSmoothTime: 0.1
 --- !u!136 &2133645719
 CapsuleCollider:
   m_ObjectHideFlags: 0

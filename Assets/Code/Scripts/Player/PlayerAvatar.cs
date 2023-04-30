@@ -1,4 +1,3 @@
-using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -15,6 +14,9 @@ namespace Code.Scripts.Player
 
         public InputActionAsset InputAsset => inputAsset;
 
+        public PlayerMovement Movement => movement;
+        public PlayerCamera Camera => camera;
+        
         private void Awake()
         {
             inputAsset.Enable();
