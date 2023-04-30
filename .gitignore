@@ -1,0 +1,11 @@
+.git
+.idea
+.vs
+/Library/
+/Logs/
+/obj/
+
+*.sln
+*.csproj
+*.htm
+*.vsconfig

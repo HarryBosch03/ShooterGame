@@ -1,0 +1,47 @@
+using System;
+using UnityEngine;
+using UnityEngine.InputSystem;
+
+namespace Code.Scripts.Player
+{
+    [SelectionBase]
+    [DisallowMultipleComponent]
+    public sealed class PlayerAvatar : MonoBehaviour
+    {
+        [SerializeField] private InputActionAsset inputAsset;
+
+        [SerializeField] private PlayerMovement movement;
+        [SerializeField] private new PlayerCamera camera;
+
+        public InputActionAsset InputAsset => inputAsset;
+
+        private void Awake()
+        {
+            inputAsset.Enable();
+
+            movement.Initialize(this);
+            camera.Initialize(this);
+        }
+
+        private void OnEnable()
+        {
+            camera.OnEnable();
+        }
+
+        private void OnDisable()
+        {
+            camera.OnDisable();
+        }
+
+        private void Update()
+        {
+            movement.Update();
+            camera.Update();
+        }
+
+        private void FixedUpdate()
+        {
+            movement.FixedUpdate();
+        }
+    }
+}
