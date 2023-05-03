@@ -2006,6 +2006,7 @@ MonoBehaviour:
     mouseSensitivity: 0.3
     baseFov: 90
     fovSmoothTime: 0.1
+    sway: 0.3
     shakeAmplitude: {x: 1, y: 1, z: 1.2}
     shakeFrequency: 1.2
     shakeSmoothTime: 0.1

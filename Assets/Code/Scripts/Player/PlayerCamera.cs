@@ -56,7 +56,7 @@ namespace Code.Scripts.Player
 
         public void Update()
         {
-            rotation += Mouse.current.delta.ReadValue() * mouseSensitivity;
+            rotation += (Vector3)Mouse.current.delta.ReadValue() * mouseSensitivity;
             rotation.y = Mathf.Clamp(rotation.y, -90.0f, 90.0f);
 
             ZoomCamera();
@@ -71,9 +71,9 @@ namespace Code.Scripts.Player
             var velocity = avatar.Movement.Velocity;
             var d1 = new Vector3
             {
-                x = Vector3.Dot(avatar.transform.forward, velocity),
-                y = 0.0f,
-                z = Vector3.Dot(avatar.transform.right, velocity)
+                x = 0.0f,
+                y = -Vector3.Dot(avatar.transform.forward, velocity),
+                z = -Vector3.Dot(avatar.transform.right, velocity),
             };
 
             frameRotationTarget += d1 * sway;

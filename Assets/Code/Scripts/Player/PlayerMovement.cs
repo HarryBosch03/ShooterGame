@@ -110,19 +110,6 @@ namespace Code.Scripts.Player
             }
         }
 
-        private void SetFootPosition(ref Vector3 footPosition, Vector3 target)
-        {
-            const float legLength = 1.0f;
-            const float legSkin = 0.75f;
-            target.y = Position.y;
-
-            var ray = new Ray(target + Vector3.up * (legLength + legSkin * 0.5f), Vector3.down);
-
-            if (!Physics.SphereCast(ray, footSize, out var hit, legLength + legSkin)) return;
-            if (Mathf.Acos(hit.normal.y) > groundTestMaxSlope * Mathf.Deg2Rad) return;
-            footPosition = hit.point;
-        }
-
         private void PerformChecks()
         {
             CheckForGround();
@@ -149,16 +136,15 @@ namespace Code.Scripts.Player
 
         private void CheckForGround()
         {
+            var skin = Grounded ? groundTestSkin : 0.0f;
+            
             var ray = new Ray(Position + Vector3.up * groundTestDistance, Vector3.down);
-            var results = Physics.SphereCastAll(ray, groundTestRadius, groundTestDistance + groundTestSkin)
+            var results = Physics.SphereCastAll(ray, groundTestRadius, groundTestDistance + skin)
                 .OrderBy(e => e.distance);
-
-            Grounded = false;
-            groundVelocity = Vector3.zero;
 
             foreach (var result in results)
             {
-                var distance = result.point.y - Position.y + groundTestSkin;
+                var distance = result.point.y - Position.y + skin;
 
                 if (result.transform.IsChildOf(avatar.transform)) continue;
                 if (distance < 0.0f) continue;
@@ -168,15 +154,17 @@ namespace Code.Scripts.Player
 
                 if (result.rigidbody)
                 {
-                    groundVelocity = result.rigidbody.velocity;
+                    groundVelocity = result.rigidbody ? result.rigidbody.velocity : Vector3.zero;
                 }
 
-                if (Velocity.y <= Error) Position += Vector3.up * (distance - groundTestSkin);
+                if (Velocity.y <= Error) Position += Vector3.up * (distance - skin);
                 if (Velocity.y < 0.0f) Velocity = new Vector3(Velocity.x, 0.0f, Velocity.z);
 
                 groundHit = result;
-                break;
+                return;
             }
+            
+            Grounded = false;
         }
 
         private void Move()
