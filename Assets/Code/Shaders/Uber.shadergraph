@@ -291,7 +291,7 @@
             },
             "m_InputSlot": {
                 "m_Node": {
-                    "m_Id": "bc3cff38036a4ba595c49a662386f3d2"
+                    "m_Id": "59ab59307b134faeadde77d6ff8c40b0"
                 },
                 "m_SlotId": 1
             }
@@ -487,7 +487,7 @@
             },
             "m_InputSlot": {
                 "m_Node": {
-                    "m_Id": "59ab59307b134faeadde77d6ff8c40b0"
+                    "m_Id": "bc3cff38036a4ba595c49a662386f3d2"
                 },
                 "m_SlotId": 1
             }
@@ -1456,9 +1456,9 @@
         "m_Expanded": true,
         "m_Position": {
             "serializedVersion": "2",
-            "x": -1078.0,
-            "y": 814.0,
-            "width": 155.0,
+            "x": -1081.0,
+            "y": 932.0,
+            "width": 155.00006103515626,
             "height": 34.0
         }
     },
@@ -2356,10 +2356,10 @@
     "m_Guid": {
         "m_GuidSerialized": "3d061693-2dfd-4544-9a5e-fbda225ba1e6"
     },
-    "m_Name": "Triplanar Noise",
+    "m_Name": "Triplanar",
     "m_DefaultRefNameVersion": 1,
-    "m_RefNameGeneratedByDisplayName": "Triplanar Noise",
-    "m_DefaultReferenceName": "_Triplanar_Noise",
+    "m_RefNameGeneratedByDisplayName": "Triplanar",
+    "m_DefaultReferenceName": "_Triplanar",
     "m_OverrideReferenceName": "",
     "m_GeneratePropertyBlock": true,
     "m_UseCustomSlotLabel": false,
@@ -3152,10 +3152,10 @@
         "m_Expanded": true,
         "m_Position": {
             "serializedVersion": "2",
-            "x": -1081.0,
-            "y": 932.0000610351563,
-            "width": 158.0,
-            "height": 33.99993896484375
+            "x": -1084.0,
+            "y": 824.0,
+            "width": 158.00006103515626,
+            "height": 34.0
         }
     },
     "m_Slots": [
@@ -4255,7 +4255,7 @@
     "m_Type": "UnityEditor.ShaderGraph.BooleanMaterialSlot",
     "m_ObjectId": "ced1fbf1246943709eff08f0cdddddf4",
     "m_Id": 0,
-    "m_DisplayName": "Triplanar Noise",
+    "m_DisplayName": "Triplanar",
     "m_SlotType": 1,
     "m_Hidden": false,
     "m_ShaderOutputName": "Out",
@@ -4772,7 +4772,7 @@
     "m_AlphaClip": false,
     "m_CastShadows": true,
     "m_ReceiveShadows": true,
-    "m_CustomEditorGUI": "",
+    "m_CustomEditorGUI": "Bosch.Editor.UberMaterialEditor",
     "m_SupportVFX": false
 }
 
