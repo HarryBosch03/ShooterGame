@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-namespace Code.Scripts
+namespace Bosch.Scripts
 {
     public static class Extensions
     {

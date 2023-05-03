@@ -1,9 +1,12 @@
 .git
 .idea
 .vs
-/Library/
-/Logs/
-/obj/
+
+[Ll]ibrary/
+[Ll]ogs/
+[Tt]emp/
+[Oo]bj/
+[Uu]ser[Ss]ettings/
 
 *.sln
 *.csproj

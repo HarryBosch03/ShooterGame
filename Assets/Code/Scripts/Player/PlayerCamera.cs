@@ -2,7 +2,7 @@ using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-namespace Code.Scripts.Player
+namespace Bosch.Scripts.Player
 {
     [Serializable]
     public sealed class PlayerCamera
@@ -34,7 +34,10 @@ namespace Code.Scripts.Player
 
         private float fov, fovVelocity;
 
+        private float cHeight, vHeight;
+
         public float Zoom { get; set; }
+        public float HeightOffset { get; set; }
 
         public void Initialize(PlayerAvatar avatar)
         {
@@ -118,10 +121,14 @@ namespace Code.Scripts.Player
             avatar.transform.rotation = Quaternion.Euler(0.0f, rotation.x, 0.0f);
             cameraContainer.rotation = Quaternion.Euler(-rotation.y, rotation.x, rotation.z);
 
+            cHeight = Mathf.SmoothDamp(cHeight, HeightOffset, ref vHeight, fovSmoothTime);
+            cameraContainer.localPosition = new Vector3(0.0f, 1.8f + cHeight, 0.0f);
+
             cam.transform.position = cameraContainer.transform.position;
             cam.transform.rotation = cameraContainer.transform.rotation;
 
             cam.fieldOfView = fov;
+            HeightOffset = 0.0f;
 
             frameRotationTarget = Vector3.zero;
         }

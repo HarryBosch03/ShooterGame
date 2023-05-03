@@ -1,28 +1,22 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.InputSystem;
-using UnityEngine.Serialization;
 
-namespace Code.Scripts.Player
+namespace Bosch.Scripts.Player
 {
     [Serializable]
     public sealed class PlayerMovement
     {
         private const float Error = 0.01f;
-        private const float MaxTranslationDistance = 0.2f;
 
         [SerializeField] private float maxSpeed = 15.0f;
         [SerializeField] private float accelerationTime = 0.1f;
         [SerializeField] [Range(0.0f, 1.0f)] private float airAccelerationPenalty = 0.2f;
 
-        [FormerlySerializedAs("springSpeedScale")] [Space] [SerializeField]
-        private float sprintSpeedScale = 2.0f;
-
-        [SerializeField] private float sprintFovScale = 0.8f;
-
-        [Space] [SerializeField] private float jumpHeight = 4.0f;
+        [Space] 
+        [SerializeField] private float jumpHeight = 4.0f;
+        [SerializeField] private int airJumps = 1;
         [SerializeField] private float jumpGravity = 3.0f;
         [SerializeField] private float fallingGravity = 3.0f;
 
@@ -31,36 +25,35 @@ namespace Code.Scripts.Player
         [SerializeField] private float groundTestRadius = 0.4f;
         [SerializeField] private float groundTestMaxSlope = 46.0f;
 
-        [Space] [SerializeField] private float hipWidth = 0.25f;
-        [SerializeField] private float footSize = 0.075f;
-        [SerializeField] private float stepDistance = 0.8f;
+        public PlayerAvatar Avatar { get; private set; }
 
-        private PlayerAvatar avatar;
-
-        private InputAction
-            moveAction,
-            jumpAction,
-            sprintAction;
-
-        private MovementState state;
+        public InputAction MoveAction { get; private set; }
+        public InputAction JumpAction { get; private set; }
+        public InputAction SprintAction { get; private set; }
+        public InputAction CrouchAction { get; private set; }
 
         private Vector3 frameAcceleration;
 
         private bool jumpLast;
-
-        private int doubleJumpsLeft;
+        
+        private int airJumpsLeft;
 
         private Collider[] colliders;
 
         private RaycastHit groundHit;
         private Vector3 groundVelocity;
 
-        public Vector3 Position { get; private set; }
+        public Vector3 Position
+        {
+            get => Avatar.transform.position;
+            private set => Avatar.transform.position = value;
+        }
+
         public Vector3 Velocity { get; private set; }
         public bool Grounded { get; private set; }
 
         public Vector3 Gravity =>
-            Physics.gravity * (Velocity.y > 0.0f && jumpAction.State() ? jumpGravity : fallingGravity);
+            Physics.gravity * (Velocity.y > 0.0f && JumpAction.State() ? jumpGravity : fallingGravity);
 
         public Vector3 RelativeVelocity => Velocity - groundVelocity;
 
@@ -71,43 +64,24 @@ namespace Code.Scripts.Player
 
         public void Initialize(PlayerAvatar avatar)
         {
-            this.avatar = avatar;
+            this.Avatar = avatar;
             colliders = avatar.GetComponentsInChildren<Collider>();
 
             Utility.Input.InputAsset = avatar.InputAsset;
-            moveAction = Utility.Input.BindFromAsset("Move");
-            jumpAction = Utility.Input.BindFromAsset("Jump");
-            sprintAction = Utility.Input.BindFromAsset("Sprint", OnSprint);
+            MoveAction = Utility.Input.BindFromAsset("Move");
+            JumpAction = Utility.Input.BindFromAsset("Jump");
         }
 
         public void FixedUpdate()
         {
             frameAcceleration = Gravity;
 
-            UpdateState();
             PerformChecks();
 
             FixedUpdateActions();
 
             PhysicsStuff();
             SetNextFrameFlags();
-        }
-
-        private void UpdateState()
-        {
-            switch (state)
-            {
-                case MovementState.Sprint:
-                    if (moveAction.ReadValue<Vector2>().y < 0.01f)
-                    {
-                        state = MovementState.Default;
-                    }
-
-                    break;
-                case MovementState.Default:
-                default:
-                    break;
-            }
         }
 
         private void PerformChecks()
@@ -118,26 +92,24 @@ namespace Code.Scripts.Player
         private void FixedUpdateActions()
         {
             Move();
-            JumpAction();
+            Jump();
         }
 
         private void PhysicsStuff()
         {
             Integrate();
             Depenetrate();
-
-            avatar.transform.position = Position;
         }
 
         private void SetNextFrameFlags()
         {
-            jumpLast = jumpAction.State();
+            jumpLast = JumpAction.State();
         }
 
         private void CheckForGround()
         {
             var skin = Grounded ? groundTestSkin : 0.0f;
-            
+
             var ray = new Ray(Position + Vector3.up * groundTestDistance, Vector3.down);
             var results = Physics.SphereCastAll(ray, groundTestRadius, groundTestDistance + skin)
                 .OrderBy(e => e.distance);
@@ -146,11 +118,12 @@ namespace Code.Scripts.Player
             {
                 var distance = result.point.y - Position.y + skin;
 
-                if (result.transform.IsChildOf(avatar.transform)) continue;
+                if (result.transform.IsChildOf(Avatar.transform)) continue;
                 if (distance < 0.0f) continue;
                 if (Mathf.Acos(result.normal.y) > groundTestMaxSlope * Mathf.Deg2Rad) continue;
 
                 Grounded = true;
+                airJumpsLeft = airJumps;
 
                 if (result.rigidbody)
                 {
@@ -163,7 +136,7 @@ namespace Code.Scripts.Player
                 groundHit = result;
                 return;
             }
-            
+
             Grounded = false;
         }
 
@@ -172,23 +145,12 @@ namespace Code.Scripts.Player
             var acceleration = 1.0f / accelerationTime;
             if (!Grounded) acceleration *= airAccelerationPenalty;
 
-            var speed = maxSpeed;
-            switch (state)
-            {
-                case MovementState.Sprint:
-                    speed *= sprintSpeedScale;
-                    break;
-                case MovementState.Default:
-                default:
-                    break;
-            }
-
-            var input = moveAction.ReadValue<Vector2>();
-            var target = avatar.transform.TransformDirection(input.x, 0.0f, input.y) * speed;
+            var input = MoveAction.ReadValue<Vector2>();
+            var target = Avatar.transform.TransformDirection(input.x, 0.0f, input.y) * maxSpeed;
             var diff = (target - Velocity);
 
             diff.y = 0.0f;
-            diff = Vector3.ClampMagnitude(diff, speed);
+            diff = Vector3.ClampMagnitude(diff, maxSpeed);
 
             var force = diff * acceleration;
 
@@ -196,14 +158,14 @@ namespace Code.Scripts.Player
             frameAcceleration += groundVelocity;
         }
 
-        private void JumpAction()
+        private void Jump()
         {
-            if (!jumpAction.State()) return;
+            if (!JumpAction.State()) return;
             if (jumpLast) return;
 
             if (!Grounded)
             {
-                if (doubleJumpsLeft > 0) doubleJumpsLeft--;
+                if (airJumpsLeft > 0) airJumpsLeft--;
                 else return;
             }
 
@@ -217,28 +179,20 @@ namespace Code.Scripts.Player
         {
             var others = GetBroadPhase();
 
-            var hits = new List<Tuple<Vector3, float>>();
-
             foreach (var self in colliders)
             {
                 foreach (var other in others)
                 {
-                    if (other.transform.IsChildOf(avatar.transform)) continue;
+                    if (other.transform.IsChildOf(Avatar.transform)) continue;
 
-                    if (Physics.ComputePenetration(self, self.transform.position, self.transform.rotation, other,
-                            other.transform.position, other.transform.rotation, out var direction, out var distance))
-                    {
-                        hits.Add(new Tuple<Vector3, float>(direction, distance));
-                    }
+                    if (!Physics.ComputePenetration(self, self.transform.position, self.transform.rotation, other,
+                            other.transform.position, other.transform.rotation, out var direction,
+                            out var distance)) continue;
+
+                    Position += direction * distance;
+                    var dot = Vector3.Dot(direction, Velocity);
+                    if (dot < 0.0f) Velocity -= direction * dot;
                 }
-            }
-
-            foreach (var hit in hits)
-            {
-                Position += hit.Item1 * hit.Item2;
-
-                var dot = Vector3.Dot(hit.Item1, Velocity);
-                if (dot < 0.0f) Velocity -= hit.Item1 * dot;
             }
         }
 
@@ -264,37 +218,12 @@ namespace Code.Scripts.Player
         {
             Position += Velocity * Time.deltaTime;
             Velocity += frameAcceleration * Time.deltaTime;
-            avatar.transform.position = Position;
+            Avatar.transform.position = Position;
         }
 
         public void Update()
         {
-            avatar.transform.position = Position;
-            
-            UpdateVFX();
-        }
-        
-        private void UpdateVFX()
-        {
-            if (state == MovementState.Sprint) avatar.Camera.Zoom *= sprintFovScale;
-        }
-
-        private void OnSprint(bool v)
-        {
-            if (v)
-            {
-                state = MovementState.Sprint;
-            }
-            else if (state == MovementState.Sprint)
-            {
-                state = MovementState.Default;
-            }
-        }
-
-        public enum MovementState
-        {
-            Default,
-            Sprint,
+            Avatar.transform.position = Position;
         }
     }
 }
