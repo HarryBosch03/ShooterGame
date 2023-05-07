@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-namespace Bosch.Scripts.Player
+namespace Bosch.Player
 {
     [SelectionBase]
     [DisallowMultipleComponent]

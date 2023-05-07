@@ -2,7 +2,7 @@ using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-namespace Bosch.Scripts.Player
+namespace Bosch.Player
 {
     [Serializable]
     public sealed class PlayerCamera

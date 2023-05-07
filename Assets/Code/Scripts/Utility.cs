@@ -1,7 +1,7 @@
 using System;
 using UnityEngine.InputSystem;
 
-namespace Bosch.Scripts
+namespace Bosch
 {
     public static class Utility
     {

@@ -75,6 +75,7 @@ MonoBehaviour:
   - {fileID: 1369310858480002148}
   - {fileID: -8407867661784960410}
   - {fileID: 1485051294420952439}
+  - {fileID: 2028299047729040314}
 --- !u!114 &1369310858480002148
 MonoBehaviour:
   m_ObjectHideFlags: 3
@@ -122,6 +123,25 @@ MonoBehaviour:
   rounded:
     m_OverrideState: 0
     m_Value: 0
+--- !u!114 &2028299047729040314
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 44f649e5e6bd9e941928f3034196ef1c, type: 3}
+  m_Name: Fog
+  m_EditorClassIdentifier: 
+  active: 1
+  density:
+    m_OverrideState: 1
+    m_Value: 1
+  color:
+    m_OverrideState: 1
+    m_Value: {r: 0.5, g: 0.5, b: 0.5, a: 1}
 --- !u!114 &6542635463765731574
 MonoBehaviour:
   m_ObjectHideFlags: 3
@@ -136,8 +156,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   active: 1
   postExposure:
-    m_OverrideState: 1
-    m_Value: 0.6
+    m_OverrideState: 0
+    m_Value: 0
   contrast:
     m_OverrideState: 0
     m_Value: 0

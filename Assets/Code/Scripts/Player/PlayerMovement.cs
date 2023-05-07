@@ -3,7 +3,7 @@ using System.Linq;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-namespace Bosch.Scripts.Player
+namespace Bosch.Player
 {
     [Serializable]
     public sealed class PlayerMovement
