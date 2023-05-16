@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -15,21 +17,47 @@ namespace Bosch
             public static bool Soft(string a, string b) => Simplify(a) == Simplify(b);
         }
 
+        public static List<Transform> DeepFindAll(this Component component, string name, NameComparisons.Delegate areEqual = null)
+        {
+            var res = new List<Transform>();
+            component.DeepFind(name, t =>
+            {
+                res.Add(t);
+                return false;
+            }, areEqual);
+            return res;
+        }
+        
         public static Transform DeepFind(this Component component, string name, NameComparisons.Delegate areEqual = null)
+        {
+            Transform res = null;
+            component.DeepFind(name, t =>
+            {
+                res = t;
+                return true;
+            }, areEqual);
+            return res;
+        }
+        
+        private static bool DeepFind(this Component component, string name, Func<Transform, bool> callback, NameComparisons.Delegate areEqual = null)
         {
             var transform = component.transform;
             areEqual ??= NameComparisons.Soft;
 
-            if (areEqual(transform.name, name)) return transform;
+            if (areEqual(transform.name, name) && callback(transform)) return true;
             foreach (Transform child in transform)
             {
-                var r = child.DeepFind(name);
-                if (r) return r;
+                if (child.DeepFind(name, callback, areEqual)) return true;
             }
             
-            return null;
+            return false;
         }
 
         public static bool State(this InputAction action) => action.ReadValue<float>() > 0.5f;
+
+        public static T GetOrAddComponent<T>(this GameObject gameObject) where T : Component
+        {
+            return gameObject.TryGetComponent(out T component) ? component : gameObject.AddComponent<T>();
+        }
     }
 }

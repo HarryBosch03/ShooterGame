@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -20,28 +21,35 @@ namespace Bosch.Player
         [SerializeField] private float jumpGravity = 3.0f;
         [SerializeField] private float fallingGravity = 3.0f;
 
-        [Space] [SerializeField] private float groundTestDistance = 1.0f;
+        [Space] 
+        [SerializeField] private float groundTestDistance = 1.0f;
         [SerializeField] private float groundTestSkin = 0.1f;
         [SerializeField] private float groundTestRadius = 0.4f;
         [SerializeField] private float groundTestMaxSlope = 46.0f;
 
-        public PlayerAvatar Avatar { get; private set; }
-
-        public InputAction MoveAction { get; private set; }
-        public InputAction JumpAction { get; private set; }
-        public InputAction SprintAction { get; private set; }
-        public InputAction CrouchAction { get; private set; }
+        [Space] 
+        [SerializeField] private float groundSlamSpeed = 30.0f;
 
         private Vector3 frameAcceleration;
 
-        private bool jumpLast;
-        
         private int airJumpsLeft;
+
+        private bool isGroundSlamming;
 
         private Collider[] colliders;
 
         private RaycastHit groundHit;
         private Vector3 groundVelocity;
+
+        private List<Action> deferredCalls = new();
+        
+        public PlayerAvatar Avatar { get; private set; }
+
+        public PlayerInput.InputAxis2D MoveAction => Avatar.Input.Move;
+        public PlayerInput.InputWrapper JumpAction => Avatar.Input.Jump;
+        public PlayerInput.InputWrapper SlamAction => Avatar.Input.Slam;
+
+        public float CurrentMovement => !Grounded ? 0.0f : (Velocity - Vector3.up * Vector3.Dot(Velocity, Vector3.up)).magnitude / maxSpeed;
 
         public Vector3 Position
         {
@@ -53,7 +61,7 @@ namespace Bosch.Player
         public bool Grounded { get; private set; }
 
         public Vector3 Gravity =>
-            Physics.gravity * (Velocity.y > 0.0f && JumpAction.State() ? jumpGravity : fallingGravity);
+            Physics.gravity * (Velocity.y > 0.0f && JumpAction.Pressed ? jumpGravity : fallingGravity);
 
         public Vector3 RelativeVelocity => Velocity - groundVelocity;
 
@@ -66,10 +74,6 @@ namespace Bosch.Player
         {
             this.Avatar = avatar;
             colliders = avatar.GetComponentsInChildren<Collider>();
-
-            Utility.Input.InputAsset = avatar.InputAsset;
-            MoveAction = Utility.Input.BindFromAsset("Move");
-            JumpAction = Utility.Input.BindFromAsset("Jump");
         }
 
         public void FixedUpdate()
@@ -81,7 +85,6 @@ namespace Bosch.Player
             FixedUpdateActions();
 
             PhysicsStuff();
-            SetNextFrameFlags();
         }
 
         private void PerformChecks()
@@ -92,18 +95,23 @@ namespace Bosch.Player
         private void FixedUpdateActions()
         {
             Move();
-            Jump();
+
+            foreach (var call in deferredCalls) call();
+            deferredCalls.Clear();
+        }
+
+        private void StartSlam()
+        {
+            if (isGroundSlamming) return;
+            if (Grounded) return;
+
+            isGroundSlamming = true;
         }
 
         private void PhysicsStuff()
         {
             Integrate();
             Depenetrate();
-        }
-
-        private void SetNextFrameFlags()
-        {
-            jumpLast = JumpAction.State();
         }
 
         private void CheckForGround()
@@ -142,10 +150,16 @@ namespace Bosch.Player
 
         private void Move()
         {
+            if (isGroundSlamming)
+            {
+                Slam();
+                return;
+            }
+            
             var acceleration = 1.0f / accelerationTime;
             if (!Grounded) acceleration *= airAccelerationPenalty;
 
-            var input = MoveAction.ReadValue<Vector2>();
+            var input = MoveAction.Value;
             var target = Avatar.transform.TransformDirection(input.x, 0.0f, input.y) * maxSpeed;
             var diff = (target - Velocity);
 
@@ -158,11 +172,21 @@ namespace Bosch.Player
             frameAcceleration += groundVelocity;
         }
 
+        private void Slam()
+        {
+            if (Grounded)
+            {
+                isGroundSlamming = false;
+                Avatar.Camera.ShakeCamera(1.0f);
+                return;
+            }
+
+            frameAcceleration = Vector3.zero;
+            Velocity = Vector3.down * groundSlamSpeed;
+        }
+
         private void Jump()
         {
-            if (!JumpAction.State()) return;
-            if (jumpLast) return;
-
             if (!Grounded)
             {
                 if (airJumpsLeft > 0) airJumpsLeft--;
@@ -224,6 +248,18 @@ namespace Bosch.Player
         public void Update()
         {
             Avatar.transform.position = Position;
+             
+            JumpAction.CallIfDown(DefferCall(Jump));
+            SlamAction.CallIfDown(DefferCall(StartSlam));
+        }
+
+        public Action DefferCall(Action callback)
+        {
+            return () =>
+            {
+                if (deferredCalls.Contains(callback)) return;
+                deferredCalls.Add(callback);
+            };
         }
     }
 }

@@ -24,21 +24,39 @@
                     "initialStateCheck": false
                 },
                 {
-                    "name": "Sprint",
+                    "name": "Slam",
                     "type": "Button",
-                    "id": "f650a1e3-977c-4d72-8891-8446b0157695",
+                    "id": "2a4cd8ea-c0fd-48af-91b4-e8d5f0762be5",
                     "expectedControlType": "Button",
                     "processors": "",
                     "interactions": "Press(behavior=2)",
                     "initialStateCheck": false
                 },
                 {
-                    "name": "Crouch",
+                    "name": "Shoot",
                     "type": "Button",
-                    "id": "2a4cd8ea-c0fd-48af-91b4-e8d5f0762be5",
+                    "id": "2bb673d4-26d6-471d-ab97-70b7e2dd546c",
                     "expectedControlType": "Button",
                     "processors": "",
-                    "interactions": "Press(behavior=2)",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
+                    "name": "Weapon.1",
+                    "type": "Button",
+                    "id": "eb2597ee-0484-4df3-8eb0-9ee0c6856102",
+                    "expectedControlType": "Button",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
+                    "name": "Holster",
+                    "type": "Button",
+                    "id": "da93effb-da92-4f80-ad36-147a83cef3fe",
+                    "expectedControlType": "Button",
+                    "processors": "",
+                    "interactions": "",
                     "initialStateCheck": false
                 }
             ],
@@ -111,23 +129,45 @@
                 },
                 {
                     "name": "",
-                    "id": "96b8b0cd-bfd6-4ed0-b171-361d057de37b",
-                    "path": "<Keyboard>/leftShift",
-                    "interactions": "",
-                    "processors": "",
-                    "groups": "",
-                    "action": "Sprint",
-                    "isComposite": false,
-                    "isPartOfComposite": false
-                },
-                {
-                    "name": "",
                     "id": "72bc8836-24ab-4917-832a-a31a5e512317",
                     "path": "<Keyboard>/leftCtrl",
                     "interactions": "",
                     "processors": "",
                     "groups": "",
-                    "action": "Crouch",
+                    "action": "Slam",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "6e6a3d7a-b886-49db-af5a-98ae1faac6fc",
+                    "path": "<Mouse>/leftButton",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Shoot",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "661a1123-9f58-4b0a-b53e-986122b5bbab",
+                    "path": "<Keyboard>/1",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Weapon.1",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "7ff327cc-36f7-4ef0-ae62-06cb78105ae8",
+                    "path": "<Keyboard>/h",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Holster",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }

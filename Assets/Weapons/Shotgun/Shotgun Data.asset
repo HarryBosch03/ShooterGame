@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3b89a4547841a3042b3d86c44ac74beb, type: 3}
+  m_Name: Shotgun Data
+  m_EditorClassIdentifier: 
+  projectilePrefab: {fileID: 2398012560857068190, guid: b9ced7215aa921a45a839613d12ceec1, type: 3}
+  speed: 500
+  damage: 1
+  projectilesPerShot: 15
+  maxSprayAngle: 5
+  fireRate: 90
+  equipTime: 0.5
+  model: {fileID: 1185394157558536837, guid: ebe512a2611859c489cc9fed361c2dd2, type: 3}

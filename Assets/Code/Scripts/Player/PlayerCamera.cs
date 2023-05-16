@@ -1,6 +1,8 @@
 using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.Serialization;
+using Random = UnityEngine.Random;
 
 namespace Bosch.Player
 {
@@ -10,16 +12,22 @@ namespace Bosch.Player
         [SerializeField] private float mouseSensitivity = 0.3f;
 
         [Space] 
+        [SerializeField] private float shakeAmplitude;
+        [SerializeField] private float shakeDecay;
+        
+        [Space] 
         [SerializeField] private float baseFov = 90.0f;
         [SerializeField] private float fovSmoothTime = 0.2f;
 
         [Space] 
         [SerializeField] private float sway;
         
-        [Space] [SerializeField] private Vector3 shakeAmplitude;
-        [Space] [SerializeField] private float shakeFrequency;
-        [Space] [SerializeField] private float shakeSmoothTime = 0.1f;
+        [FormerlySerializedAs("shakeAmplitude")] [Space] [SerializeField] private Vector3 bobAmplitude;
+        [FormerlySerializedAs("shakeFrequency")] [Space] [SerializeField] private float bobFrequency;
+        [FormerlySerializedAs("shakeSmoothTime")] [Space] [SerializeField] private float bobSmoothTime = 0.1f;
 
+        private static event Action<Func<Vector3, float>> cameraShakeEvent;
+        
         private PlayerAvatar avatar;
         private Transform cameraContainer;
 
@@ -31,14 +39,16 @@ namespace Bosch.Player
         private Vector3 rotation;
 
         private float distance = 0.0f;
-
         private float fov, fovVelocity;
-
         private float cHeight, vHeight;
+        
+        private float shakeIntensity;
 
         public float Zoom { get; set; }
         public float HeightOffset { get; set; }
-
+        public Vector3 FrameTranslation { get; set; }
+        public Quaternion FrameRotation { get; set; }
+        
         public void Initialize(PlayerAvatar avatar)
         {
             this.avatar = avatar;
@@ -50,11 +60,15 @@ namespace Bosch.Player
         public void OnEnable()
         {
             Cursor.lockState = CursorLockMode.Locked;
+
+            cameraShakeEvent += ShakeCamera;
         }
 
         public void OnDisable()
         {
             Cursor.lockState = CursorLockMode.None;
+            
+            cameraShakeEvent -= ShakeCamera;
         }
 
         public void Update()
@@ -62,14 +76,24 @@ namespace Bosch.Player
             rotation += (Vector3)Mouse.current.delta.ReadValue() * mouseSensitivity;
             rotation.y = Mathf.Clamp(rotation.y, -90.0f, 90.0f);
 
-            ZoomCamera();
-            BobCamera();
-            SwayCamera();
-
+            ApplyZoom();
+            ApplyBob();
+            ApplySway();
+            ApplyShake();
+            
             DriveCamera();
         }
 
-        private void SwayCamera()
+        private void ApplyShake()
+        {
+            var angle = Random.value * Mathf.PI * 2.0f;
+            var offset = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * shakeIntensity;
+
+            FrameTranslation += cameraContainer.rotation * offset;
+            shakeIntensity -= shakeIntensity * shakeDecay * Time.deltaTime;
+        }
+
+        private void ApplySway()
         {
             var velocity = avatar.Movement.Velocity;
             var d1 = new Vector3
@@ -82,23 +106,23 @@ namespace Bosch.Player
             frameRotationTarget += d1 * sway;
         }
 
-        private void BobCamera()
+        private void ApplyBob()
         {
             if (!avatar.Movement.Grounded) return;
             
             var speed = avatar.Movement.MoveSpeed;
             distance += speed * Time.deltaTime;
 
-            var shake = new Vector3(Mathf.Cos(distance * shakeFrequency),
-                -Mathf.Abs(Mathf.Sin(distance * shakeFrequency)), 0.0f);
-            shake.x *= shakeAmplitude.x;
-            shake.y *= shakeAmplitude.y;
-            shake *= shakeAmplitude.z * speed / avatar.Movement.MaxSpeed;
+            var shake = new Vector3(Mathf.Cos(distance * bobFrequency),
+                -Mathf.Abs(Mathf.Sin(distance * bobFrequency)), 0.0f);
+            shake.x *= bobAmplitude.x;
+            shake.y *= bobAmplitude.y;
+            shake *= bobAmplitude.z * speed / avatar.Movement.MaxSpeed;
 
             frameRotationTarget += shake;
         }
 
-        private void ZoomCamera()
+        private void ApplyZoom()
         {
             var baseFovRad = baseFov * Mathf.Deg2Rad;
             var tFovRad = 2.0f * Mathf.Atan(Mathf.Tan(0.5f * baseFovRad) / Zoom);
@@ -110,19 +134,19 @@ namespace Bosch.Player
         private void DriveCamera()
         {
             frameRotation.x = Mathf.SmoothDampAngle(frameRotation.x, frameRotationTarget.x, ref frameRotationVelocity.x,
-                shakeSmoothTime);
+                bobSmoothTime);
             frameRotation.y = Mathf.SmoothDampAngle(frameRotation.y, frameRotationTarget.y, ref frameRotationVelocity.y,
-                shakeSmoothTime);
+                bobSmoothTime);
             frameRotation.z = Mathf.SmoothDampAngle(frameRotation.z, frameRotationTarget.z, ref frameRotationVelocity.z,
-                shakeSmoothTime);
+                bobSmoothTime);
             
             var rotation = this.rotation + frameRotation;
 
             avatar.transform.rotation = Quaternion.Euler(0.0f, rotation.x, 0.0f);
-            cameraContainer.rotation = Quaternion.Euler(-rotation.y, rotation.x, rotation.z);
+            cameraContainer.rotation = FrameRotation.normalized * Quaternion.Euler(-rotation.y, rotation.x, rotation.z);
 
             cHeight = Mathf.SmoothDamp(cHeight, HeightOffset, ref vHeight, fovSmoothTime);
-            cameraContainer.localPosition = new Vector3(0.0f, 1.8f + cHeight, 0.0f);
+            cameraContainer.localPosition = FrameTranslation + new Vector3(0.0f, 1.8f + cHeight, 0.0f);
 
             cam.transform.position = cameraContainer.transform.position;
             cam.transform.rotation = cameraContainer.transform.rotation;
@@ -131,6 +155,16 @@ namespace Bosch.Player
             HeightOffset = 0.0f;
 
             frameRotationTarget = Vector3.zero;
+
+            FrameTranslation = Vector3.zero;
+            FrameRotation = Quaternion.identity;
+        }
+
+        public static void ShakeCameraAll(Func<Vector3, float> intensity) => cameraShakeEvent?.Invoke(intensity);
+        public void ShakeCamera(Func<Vector3, float> intensity) => ShakeCamera(intensity(cameraContainer.position));
+        public void ShakeCamera(float intensity)
+        {
+            shakeIntensity += intensity;
         }
     }
 }

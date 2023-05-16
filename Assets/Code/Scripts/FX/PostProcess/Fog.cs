@@ -10,8 +10,7 @@ namespace Bosch.FX.PostProcess
         public bool IsActive() => true;
         public bool IsTileCompatible() => false;
 
-        [Header("Fog Settings")] 
-        public FloatParameter density = new(1.0f, true);
+        [Header("Fog Settings")] public FloatParameter density = new(1.0f, true);
         public ColorParameter color = new(Color.gray, true);
     }
 
@@ -20,37 +19,59 @@ namespace Bosch.FX.PostProcess
         private readonly Shader fogShader = Shader.Find("Hidden/Fog");
         private readonly Material fogMaterial;
 
-        private CustomRenderFeatures customRenderFeatures;
+        private RenderTargetIdentifier source;
+        private RenderTargetIdentifier temp;
         
-        public FogPass(CustomRenderFeatures customRenderFeatures)
+        private readonly int tempHandle = Shader.PropertyToID("_Temp");
+        private static readonly int Value = Shader.PropertyToID("_Value");
+        private static readonly int Color = Shader.PropertyToID("_Color");
+
+        public FogPass()
         {
-            this.customRenderFeatures = customRenderFeatures;
-            
             fogMaterial = CoreUtils.CreateEngineMaterial(fogShader);
+            renderPassEvent = RenderPassEvent.BeforeRenderingPostProcessing;
+        }
+
+        public override void OnCameraSetup(CommandBuffer cmd, ref RenderingData renderingData)
+        {
+            var descriptor = renderingData.cameraData.cameraTargetDescriptor;
+            descriptor.depthBufferBits = 0;
+
+            var renderer = renderingData.cameraData.renderer;
+            source = renderer.cameraColorTarget;
+            
+            cmd.GetTemporaryRT(tempHandle, descriptor, FilterMode.Bilinear);
+            temp = new RenderTargetIdentifier(tempHandle);
         }
 
         public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData)
         {
+            var cmd = CommandBufferPool.Get();
+            cmd.Clear();
+
             var stack = VolumeManager.instance.stack;
             var effect = stack.GetComponent<Fog>();
-
-            var cmd = CommandBufferPool.Get();
+            
+            fogMaterial.SetColor(Color, effect.color.value);
+            fogMaterial.SetFloat(Value, effect.density.value);
 
             using (new ProfilingScope(cmd, new ProfilingSampler("Fog Pass")))
             {
-                var cameraColorTarget = renderingData.cameraData.renderer.cameraColorTarget;
-                cmd.Blit(cameraColorTarget, cameraColorTarget, fogMaterial);
+                Blit(cmd, source, temp, fogMaterial);
+                Blit(cmd, temp, source);
             }
-            
+
             context.ExecuteCommandBuffer(cmd);
             cmd.Clear();
-            
             CommandBufferPool.Release(cmd);
         }
 
-        public void Cleanup()
+
+        public override void OnCameraCleanup(CommandBuffer cmd)
         {
-            CoreUtils.Destroy(fogMaterial);
+            base.OnCameraCleanup(cmd);
+            
+            cmd.ReleaseTemporaryRT(tempHandle);
         }
     }
 }

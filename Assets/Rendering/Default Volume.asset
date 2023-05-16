@@ -138,7 +138,7 @@ MonoBehaviour:
   active: 1
   density:
     m_OverrideState: 1
-    m_Value: 1
+    m_Value: 6
   color:
     m_OverrideState: 1
     m_Value: {r: 0.5, g: 0.5, b: 0.5, a: 1}
