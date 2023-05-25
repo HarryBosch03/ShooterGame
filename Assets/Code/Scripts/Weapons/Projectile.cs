@@ -6,6 +6,8 @@ namespace Bosch.Weapons
     public class Projectile : MonoBehaviour
     {
         private int damage;
+        private float lifetime;
+        private float awakeTime;
 
         private GameObject hitEffect;
 
@@ -17,6 +19,8 @@ namespace Bosch.Weapons
 
             hitEffect = transform.DeepFind("Hit Effect").gameObject;
             if (hitEffect) hitEffect.SetActive(false);
+
+            awakeTime = Time.time;
         }
 
         private void FixedUpdate()
@@ -26,6 +30,12 @@ namespace Bosch.Weapons
 
         private void Collide()
         {
+            if (Time.time - awakeTime > lifetime)
+            {
+                Destroy(gameObject);
+                return;
+            }
+            
             var ray = new Ray(rigidbody.position, rigidbody.velocity);
             var speed = rigidbody.velocity.magnitude;
             if (!Physics.Raycast(ray, out var hit, speed * Time.deltaTime * 1.01f)) return;
@@ -42,7 +52,7 @@ namespace Bosch.Weapons
             Destroy(gameObject);
         }
 
-        public void Spawn(WeaponData profile, Transform muzzle)
+        public static void Spawn(WeaponData profile, Transform muzzle)
         {
             var angle = Random.value * 2.0f * Mathf.PI;
             var length = Random.value;
@@ -59,8 +69,9 @@ namespace Bosch.Weapons
             instance.rigidbody.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
             instance.rigidbody.interpolation = RigidbodyInterpolation.Interpolate;
 
-            instance.rigidbody.velocity = rotation * Vector3.forward * profile.speed;
-            instance.damage = profile.damage;
+            instance.rigidbody.velocity = rotation * Vector3.forward * profile.projectileSpeed;
+            instance.damage = profile.projectileDamage;
+            instance.lifetime = profile.projectileLifetime;
         }
     }
 }

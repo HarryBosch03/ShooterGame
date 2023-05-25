@@ -12,6 +12,7 @@ namespace Bosch.FX.PostProcess
 
         [Header("Fog Settings")] public FloatParameter density = new(1.0f, true);
         public ColorParameter color = new(Color.gray, true);
+        [Header("Fog Settings")] public ClampedFloatParameter farPlane = new(0.9f, 0.0f, 1.0f, true);
     }
 
     public sealed class FogPass : ScriptableRenderPass
@@ -25,6 +26,7 @@ namespace Bosch.FX.PostProcess
         private readonly int tempHandle = Shader.PropertyToID("_Temp");
         private static readonly int Value = Shader.PropertyToID("_Value");
         private static readonly int Color = Shader.PropertyToID("_Color");
+        private static readonly int FarPlane = Shader.PropertyToID("_FarPlane");
 
         public FogPass()
         {
@@ -54,6 +56,7 @@ namespace Bosch.FX.PostProcess
             
             fogMaterial.SetColor(Color, effect.color.value);
             fogMaterial.SetFloat(Value, effect.density.value);
+            fogMaterial.SetFloat(FarPlane, effect.farPlane.value);
 
             using (new ProfilingScope(cmd, new ProfilingSampler("Fog Pass")))
             {

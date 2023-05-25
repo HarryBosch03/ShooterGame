@@ -5,6 +5,7 @@ Shader "Hidden/Fog"
         _MainTex ("Texture", 2D) = "white" {}
         _Value ("Fog Density", float) = 1.0
         _Color ("Fog Color", Color) = (0.5, 0.5, 0.5, 1.0)
+        _FarPlane ("Far Plane", float) = 0.9
     }
     SubShader
     {
@@ -45,7 +46,7 @@ Shader "Hidden/Fog"
             SAMPLER(sampler_MainTex);
 
             float3 _Color;
-            float _Value;
+            float _Value, _FarPlane;
             
             float4 frag (Varyings i) : SV_Target
             {
@@ -57,8 +58,9 @@ Shader "Hidden/Fog"
                 float fog = pow(2.71, dist / 1000.0 * _Value) - 1.0;
                 fog = clamp(fog, 0.0, 1.0);
 
-                col = lerp(col, _Color, fog);
-                return float4(col.rgb, 1.0);
+                float isSkybox = (dist / _ProjectionParams.z) > _FarPlane;
+                col = lerp(col, _Color, fog * !isSkybox);
+                return float4(col, 1.0);
             }
             ENDHLSL
         }

@@ -18,6 +18,7 @@ namespace Bosch.Player
         public InputWrapper Slam { get; private set; }
         public InputWrapper Shoot { get; private set; }
         public InputWrapper Holster { get; private set; }
+        public InputWrapper Slide { get; private set; }
         public List<InputWrapper> EquipWeapon { get; private set; }
 
         public void Initialize(PlayerAvatar avatar)
@@ -31,6 +32,7 @@ namespace Bosch.Player
             Slam = BindWrapper("Slam");
             Shoot = BindWrapper("Shoot");
             Holster = BindWrapper("Holster");
+            Slide = BindWrapper("Slide");
 
             EquipWeapon = new List<InputWrapper>();
             while (true)

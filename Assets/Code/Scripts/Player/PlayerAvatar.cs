@@ -1,6 +1,5 @@
 using Bosch.Weapons;
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 namespace Bosch.Player
 {

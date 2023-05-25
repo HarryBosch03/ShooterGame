@@ -21,6 +21,9 @@ namespace Bosch.Player
 
         [Space] 
         [SerializeField] private float sway;
+
+        [Space] 
+        [SerializeField] private float slideDrop = 1.4f;
         
         [FormerlySerializedAs("shakeAmplitude")] [Space] [SerializeField] private Vector3 bobAmplitude;
         [FormerlySerializedAs("shakeFrequency")] [Space] [SerializeField] private float bobFrequency;
@@ -109,6 +112,11 @@ namespace Bosch.Player
         private void ApplyBob()
         {
             if (!avatar.Movement.Grounded) return;
+            if (avatar.Movement.Sliding)
+            {
+                HeightOffset -= slideDrop;
+                return;
+            }
             
             var speed = avatar.Movement.MoveSpeed;
             distance += speed * Time.deltaTime;

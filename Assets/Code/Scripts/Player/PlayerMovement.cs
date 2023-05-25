@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
-using UnityEngine.InputSystem;
+using UnityEngine.Serialization;
 
 namespace Bosch.Player
 {
@@ -15,21 +15,32 @@ namespace Bosch.Player
         [SerializeField] private float accelerationTime = 0.1f;
         [SerializeField] [Range(0.0f, 1.0f)] private float airAccelerationPenalty = 0.2f;
 
-        [Space] 
+        [Space]
         [SerializeField] private float jumpHeight = 4.0f;
         [SerializeField] private int airJumps = 1;
         [SerializeField] private float jumpGravity = 3.0f;
         [SerializeField] private float fallingGravity = 3.0f;
 
-        [Space] 
+        [Space]
         [SerializeField] private float groundTestDistance = 1.0f;
         [SerializeField] private float groundTestSkin = 0.1f;
         [SerializeField] private float groundTestRadius = 0.4f;
         [SerializeField] private float groundTestMaxSlope = 46.0f;
 
-        [Space] 
+        [Space]
+        [SerializeField] private float wallTestDistance = 0.8f;
+        [SerializeField] private int wallTestIterations = 12;
+        [SerializeField] private float wallTestAngle = 20.0f;
+        [SerializeField] [Range(0.0f, 1.0f)] private float wallFriction = 0.5f;
+        [SerializeField] private float wallJumpHorizontalForce = 10.0f;
+        [SerializeField] private float wallJumpHeightPenalty = 0.8f;
+
+        [Space]
         [SerializeField] private float groundSlamSpeed = 30.0f;
 
+        [Space] 
+        [SerializeField] [Range(0.0f, 1.0f)] private float slidePenalty = 0.3f;
+        
         private Vector3 frameAcceleration;
 
         private int airJumpsLeft;
@@ -42,12 +53,23 @@ namespace Bosch.Player
         private Vector3 groundVelocity;
 
         private List<Action> deferredCalls = new();
+
+        public PlayerAvatar Avatar { get; private set; }    
         
-        public PlayerAvatar Avatar { get; private set; }
 
         public PlayerInput.InputAxis2D MoveAction => Avatar.Input.Move;
         public PlayerInput.InputWrapper JumpAction => Avatar.Input.Jump;
         public PlayerInput.InputWrapper SlamAction => Avatar.Input.Slam;
+        public PlayerInput.InputWrapper SlideAction => Avatar.Input.Slide;
+
+        public Vector3 WorldDirection
+        {
+            get
+            {
+                var input = MoveAction.Value;
+                return Avatar.transform.TransformDirection(input.x, 0.0f, input.y);
+            }
+        }
 
         public float CurrentMovement => !Grounded ? 0.0f : (Velocity - Vector3.up * Vector3.Dot(Velocity, Vector3.up)).magnitude / maxSpeed;
 
@@ -60,6 +82,9 @@ namespace Bosch.Player
         public Vector3 Velocity { get; private set; }
         public bool Grounded { get; private set; }
 
+        public bool OnWall { get; private set; }
+        public RaycastHit WallHit { get; private set; }
+
         public Vector3 Gravity =>
             Physics.gravity * (Velocity.y > 0.0f && JumpAction.Pressed ? jumpGravity : fallingGravity);
 
@@ -69,10 +94,12 @@ namespace Bosch.Player
             Mathf.Sqrt(RelativeVelocity.x * RelativeVelocity.x + RelativeVelocity.z * RelativeVelocity.z);
 
         public float MaxSpeed => maxSpeed;
+        
+        public bool Sliding { get; private set; }
 
         public void Initialize(PlayerAvatar avatar)
         {
-            this.Avatar = avatar;
+            Avatar = avatar;
             colliders = avatar.GetComponentsInChildren<Collider>();
         }
 
@@ -80,16 +107,61 @@ namespace Bosch.Player
         {
             frameAcceleration = Gravity;
 
+            ResetState();
             PerformChecks();
-
             FixedUpdateActions();
-
             PhysicsStuff();
+        }
+
+        private void ResetState()
+        {
+            Sliding = false;
         }
 
         private void PerformChecks()
         {
             CheckForGround();
+            CheckForWalls();
+        }
+
+        private void CheckForWalls()
+        {
+            OnWall = false;
+
+            if (Grounded) return;
+            if (isGroundSlamming) return;
+
+            var direction = WorldDirection;
+            var l = direction.magnitude;
+            direction /= l;
+            if (l < 0.2f) return;
+
+            var found = false;
+            var hit = new RaycastHit();
+            for (var i = 0; i < wallTestIterations * 2 + 1; i++)
+            {
+                // ReSharper disable once PossibleLossOfFraction
+                var a = ((i + 1) / 2) / (float)wallTestIterations * wallTestAngle * (i % 2 == 0 ? -1.0f : 1.0f);
+                var d = Quaternion.Euler(0.0f, a, 0.0f) * direction;
+                var ray = new Ray(Position, d);
+
+                if (!Physics.Raycast(ray, out hit, wallTestDistance))
+                {
+                    Debug.DrawRay(Position, d.normalized * wallTestDistance, Color.red);
+                    continue;
+                }
+
+                Debug.DrawRay(Position, d.normalized * wallTestDistance, Color.green);
+                found = true;
+                break;
+            }
+
+            if (!found) return;
+
+            OnWall = true;
+            WallHit = hit;
+
+            if (Velocity.y < 0.0f) frameAcceleration.y += -Velocity.y / Time.deltaTime * wallFriction;
         }
 
         private void FixedUpdateActions()
@@ -155,12 +227,20 @@ namespace Bosch.Player
                 Slam();
                 return;
             }
+            if (!Grounded)
+            {
+                AirStrafe(airAccelerationPenalty);
+                return;
+            }
+            if (SlideAction.Pressed)
+            {
+                AirStrafe(slidePenalty);
+                return;
+            }
             
             var acceleration = 1.0f / accelerationTime;
-            if (!Grounded) acceleration *= airAccelerationPenalty;
 
-            var input = MoveAction.Value;
-            var target = Avatar.transform.TransformDirection(input.x, 0.0f, input.y) * maxSpeed;
+            var target = WorldDirection * maxSpeed;
             var diff = (target - Velocity);
 
             diff.y = 0.0f;
@@ -170,6 +250,15 @@ namespace Bosch.Player
 
             frameAcceleration += force;
             frameAcceleration += groundVelocity;
+        }
+
+        private void AirStrafe(float penalty)
+        {
+            var force = WorldDirection * maxSpeed / accelerationTime * penalty;
+            var dot = Vector3.Dot(WorldDirection.normalized, Velocity);
+            force *= Mathf.Clamp01(1.0f - dot / maxSpeed);
+            frameAcceleration += force;
+            Sliding = true;
         }
 
         private void Slam()
@@ -187,6 +276,12 @@ namespace Bosch.Player
 
         private void Jump()
         {
+            if (OnWall)
+            {
+                WallJump();
+                return;
+            }
+
             if (!Grounded)
             {
                 if (airJumpsLeft > 0) airJumpsLeft--;
@@ -196,6 +291,26 @@ namespace Bosch.Player
             var jumpForce = Mathf.Sqrt(2.0f * -Physics.gravity.y * jumpGravity * jumpHeight);
             frameAcceleration += Vector3.up * jumpForce / Time.deltaTime;
 
+            if (Velocity.y < 0.0f) frameAcceleration += Vector3.up * -Velocity.y / Time.deltaTime;
+        }
+
+        private void WallJump()
+        {
+            var direction = WorldDirection;
+            if (direction.magnitude < 0.2f)
+            {
+                direction = WallHit.normal;
+            }
+            else
+            {
+                direction = Vector3.Reflect(direction, WallHit.normal);
+                direction.Normalize();
+            }
+
+            var jumpForce = Mathf.Sqrt(2.0f * -Physics.gravity.y * jumpGravity * jumpHeight);
+            var impulse = direction * wallJumpHorizontalForce + Vector3.up * jumpForce * wallJumpHeightPenalty;
+
+            frameAcceleration += impulse / Time.deltaTime;
             if (Velocity.y < 0.0f) frameAcceleration += Vector3.up * -Velocity.y / Time.deltaTime;
         }
 
@@ -248,7 +363,7 @@ namespace Bosch.Player
         public void Update()
         {
             Avatar.transform.position = Position;
-             
+
             JumpAction.CallIfDown(DefferCall(Jump));
             SlamAction.CallIfDown(DefferCall(StartSlam));
         }

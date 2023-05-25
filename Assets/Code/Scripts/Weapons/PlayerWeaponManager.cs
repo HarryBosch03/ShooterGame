@@ -103,7 +103,7 @@ namespace Bosch.Weapons
 
             for (var i = 0; i < Profile.projectilesPerShot; i++)
             {
-                Profile.projectilePrefab.Spawn(Profile, muzzle);
+                Projectile.Spawn(Profile, muzzle);
             }
 
             animator.Play("Shoot", 0, 0.0f);
