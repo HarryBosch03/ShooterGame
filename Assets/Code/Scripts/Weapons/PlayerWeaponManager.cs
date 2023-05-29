@@ -77,7 +77,7 @@ namespace Bosch.Weapons
             
             avatar.Camera.FrameRotation *= cameraBone.localRotation * Quaternion.Euler(-90.0f, 180.0f, 0.0f);
 
-            var tMovement = avatar.Movement.CurrentMovement;
+            var tMovement = avatar.Movement.GroundMovement;
             if (propertyValueSmoothing > 0.0f)
                 cMovement += (tMovement - cMovement) / propertyValueSmoothing * Time.deltaTime;
             else cMovement = tMovement;

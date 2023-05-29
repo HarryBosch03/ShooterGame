@@ -1,3 +1,5 @@
+using System;
+using Bosch.Bipedal;
 using Bosch.Weapons;
 using UnityEngine;
 
@@ -13,9 +15,8 @@ namespace Bosch.Player
         [SerializeField] private PlayerWeaponManager weaponManager;
 
         public PlayerInput Input => input;
-
-        public PlayerMovement Movement => movement;
         public PlayerCamera Camera => camera;
+        public PlayerMovement Movement => movement;
         
         private void Awake()
         {
@@ -39,7 +40,7 @@ namespace Bosch.Player
         private void Update()
         {
             input.Update();
-            
+
             movement.Update();
             weaponManager.Update();
             camera.Update();

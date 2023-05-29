@@ -59,7 +59,7 @@ Shader "TextMeshPro/Sprite"
             #pragma multi_compile __ UNITY_UI_CLIP_RECT
             #pragma multi_compile __ UNITY_UI_ALPHACLIP
 			
-			struct appdata_t
+			struct Attributes
 			{
 				float4 vertex   : POSITION;
 				float4 color    : COLOR;
@@ -67,7 +67,7 @@ Shader "TextMeshPro/Sprite"
                 UNITY_VERTEX_INPUT_INSTANCE_ID
 			};
 
-			struct v2f
+			struct Varyings
 			{
 				float4 vertex   : SV_POSITION;
 				fixed4 color    : COLOR;
@@ -82,21 +82,21 @@ Shader "TextMeshPro/Sprite"
 			float4 _ClipRect;
             float4 _MainTex_ST;
 
-            v2f vert(appdata_t v)
+            Varyings vert(Attributes input)
 			{
-				v2f OUT;
+				Varyings OUT;
                 UNITY_SETUP_INSTANCE_ID(v);
                 UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(OUT);
-                OUT.worldPosition = v.vertex;
+                OUT.worldPosition = input.vertex;
 				OUT.vertex = UnityObjectToClipPos(OUT.worldPosition);
 
-                OUT.texcoord = TRANSFORM_TEX(v.texcoord, _MainTex);
+                OUT.texcoord = TRANSFORM_TEX(input.texcoord, _MainTex);
 				
-                OUT.color = v.color * _Color;
+                OUT.color = input.color * _Color;
 				return OUT;
 			}
 
-			fixed4 frag(v2f IN) : SV_Target
+			fixed4 frag(Varyings IN) : SV_Target
 			{
 				half4 color = (tex2D(_MainTex, IN.texcoord) + _TextureSampleAdd) * IN.color;
 				

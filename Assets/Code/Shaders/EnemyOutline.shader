@@ -19,14 +19,14 @@ Shader "Unlit/EnemyOutline"
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/core.hlsl"
 
-            struct appdata
+            struct Attributes
             {
                 float4 vertex : POSITION;
                 float4 normal : NORMAL;
                 float2 uv : TEXCOORD0;
             };
 
-            struct v2f
+            struct Varyings
             {
                 float2 uv : TEXCOORD0;
                 float4 vertex : SV_POSITION;
@@ -34,21 +34,21 @@ Shader "Unlit/EnemyOutline"
                 float3 normal : VAR_NORMAL;
             };
 
-            v2f vert (appdata v)
+            Varyings vert (Attributes input)
             {
-                v2f o;
-                float3 worldPos = TransformObjectToWorld(v.vertex.xyz).xyz;
+                Varyings o;
+                float3 worldPos = TransformObjectToWorld(input.vertex.xyz).xyz;
                 o.vertex = TransformWorldToHClip(worldPos);
-                o.uv = v.uv;
+                o.uv = input.uv;
                 o.dir = _WorldSpaceCameraPos - worldPos;
-                o.normal = TransformObjectToWorldNormal(v.normal);
+                o.normal = TransformObjectToWorldNormal(input.normal);
                 return o;
             }
 
             float4 _Color;
             float _Value, _Exponent;
             
-            float4 frag (v2f i) : SV_Target
+            float4 frag (Varyings i) : SV_Target
             {
                 float3 dir = normalize(i.dir);
                 float3 normal = normalize(i.normal);

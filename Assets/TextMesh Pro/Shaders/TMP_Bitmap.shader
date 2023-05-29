@@ -55,14 +55,14 @@ SubShader{
 
 		#include "UnityCG.cginc"
 
-		struct appdata_t {
+		struct Attributes {
 			float4 vertex		: POSITION;
 			fixed4 color		: COLOR;
 			float2 texcoord0	: TEXCOORD0;
 			float2 texcoord1	: TEXCOORD1;
 		};
 
-		struct v2f {
+		struct Varyings {
 			float4	vertex		: SV_POSITION;
 			fixed4	color		: COLOR;
 			float2	texcoord0	: TEXCOORD0;
@@ -90,9 +90,9 @@ SubShader{
 			return output * 0.001953125;
 		}
 
-		v2f vert (appdata_t v)
+		Varyings vert (Attributes input)
 		{
-			float4 vert = v.vertex;
+			float4 vert = input.vertex;
 			vert.x += _VertexOffsetX;
 			vert.y += _VertexOffsetY;
 
@@ -100,14 +100,14 @@ SubShader{
 
 			float4 vPosition = UnityPixelSnap(UnityObjectToClipPos(vert));
 
-			fixed4 faceColor = v.color;
+			fixed4 faceColor = input.color;
 			faceColor *= _FaceColor;
 
-			v2f OUT;
+			Varyings OUT;
 			OUT.vertex = vPosition;
 			OUT.color = faceColor;
-			OUT.texcoord0 = v.texcoord0;
-			OUT.texcoord1 = TRANSFORM_TEX(UnpackUV(v.texcoord1), _FaceTex);
+			OUT.texcoord0 = input.texcoord0;
+			OUT.texcoord1 = TRANSFORM_TEX(UnpackUV(input.texcoord1), _FaceTex);
 			float2 pixelSize = vPosition.w;
 			pixelSize /= abs(float2(_ScreenParams.x * UNITY_MATRIX_P[0][0], _ScreenParams.y * UNITY_MATRIX_P[1][1]));
 
@@ -118,7 +118,7 @@ SubShader{
 			return OUT;
 		}
 
-		fixed4 frag (v2f IN) : SV_Target
+		fixed4 frag (Varyings IN) : SV_Target
 		{
 			fixed4 color = tex2D(_MainTex, IN.texcoord0);
 			color = fixed4 (tex2D(_FaceTex, IN.texcoord1).rgb * IN.color.rgb, IN.color.a * color.a);

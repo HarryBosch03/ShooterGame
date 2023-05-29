@@ -25,9 +25,10 @@ namespace Bosch.Player
         [Space] 
         [SerializeField] private float slideDrop = 1.4f;
         
-        [FormerlySerializedAs("shakeAmplitude")] [Space] [SerializeField] private Vector3 bobAmplitude;
-        [FormerlySerializedAs("shakeFrequency")] [Space] [SerializeField] private float bobFrequency;
-        [FormerlySerializedAs("shakeSmoothTime")] [Space] [SerializeField] private float bobSmoothTime = 0.1f;
+        [Space] 
+        [SerializeField] private Vector3 bobAmplitude;
+        [SerializeField] private float bobFrequency;
+        [SerializeField] private float bobSmoothTime = 0.1f;
 
         private static event Action<Func<Vector3, float>> cameraShakeEvent;
         
@@ -98,7 +99,7 @@ namespace Bosch.Player
 
         private void ApplySway()
         {
-            var velocity = avatar.Movement.Velocity;
+            var velocity = avatar.Movement.Target.velocity;
             var d1 = new Vector3
             {
                 x = 0.0f,

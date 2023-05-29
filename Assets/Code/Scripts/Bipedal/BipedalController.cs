@@ -8,6 +8,8 @@ namespace Bosch.Bipedal
     [DisallowMultipleComponent]
     public class BipedalController : MonoBehaviour
     {
+        private const int JumpSpringIgnoreFrames = 3;
+        
         [SerializeField] private float maxGroundSpeed = 12.0f;
         [SerializeField] private float accelerationTime = 0.1f;
         
@@ -15,26 +17,35 @@ namespace Bosch.Bipedal
         [SerializeField] private float jumpHeight = 3.0f;
         [SerializeField] private float gravityScale = 2.0f;
 
-        [Space] [SerializeField] private float groundCheckDistance;
-        [Space] [SerializeField] private float groundSpring;
-        [Space] [SerializeField] private float groundDamper;
+        [Space] 
+        [SerializeField] private float groundCheckDistance;
+        [SerializeField] private float groundSpring;
+        [SerializeField] private float groundDamper;
 
-        private new Rigidbody rigidbody;
+        private int lastJumpFrame;
+        private int frame;
         
         public Vector3 MoveDirection { get; set; }
         public bool Jump { get; set; }
-        public Vector3 Gravity => Physics.gravity * gravityScale;
-        
-        public readonly Ground grounded = new();
-       
+        public virtual Vector3 Gravity => Physics.gravity * gravityScale;
+        public Rigidbody Rigidbody { get; private set; }
+
+        public Ground Grounded { get; } = new();
+
+        public virtual bool CanJump => Grounded;
+
+        public float MoveSpeed => Rigidbody.velocity.magnitude - Rigidbody.velocity.y;
+        public float MaxSpeed => maxGroundSpeed;
+        public float GroundMovement => !Grounded ? 0.0f : (Rigidbody.velocity - Vector3.up * Rigidbody.velocity.y).magnitude / maxGroundSpeed;
+
         private void Awake()
         {
-            rigidbody = gameObject.GetOrAddComponent<Rigidbody>();
+            Rigidbody = gameObject.GetOrAddComponent<Rigidbody>();
 
-            rigidbody.constraints = RigidbodyConstraints.FreezeRotation;
-            rigidbody.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
-            rigidbody.interpolation = RigidbodyInterpolation.Interpolate;
-            rigidbody.useGravity = false;
+            Rigidbody.constraints = RigidbodyConstraints.FreezeRotation;
+            Rigidbody.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+            Rigidbody.interpolation = RigidbodyInterpolation.Interpolate;
+            Rigidbody.useGravity = false;
         }
 
         private void FixedUpdate()
@@ -42,24 +53,27 @@ namespace Bosch.Bipedal
             CheckForGround();
             
             Move();
-            PerformJump();
-
+            ApplyJumpForce();
             AddSpringForce();
-
             AddGravityForce();
+
+            frame++;
         }
 
         private void AddGravityForce()
         {
-            rigidbody.AddForce(Gravity, ForceMode.Acceleration);
+            Rigidbody.AddForce(Gravity, ForceMode.Acceleration);
         }
 
         private void AddSpringForce()
         {
-            var contraction = 1.0f - grounded.hit.distance / groundCheckDistance;
-            var force = Vector3.up * (contraction * groundSpring - rigidbody.velocity.y * groundDamper);
+            if (!Grounded) return;
+            if (frame - lastJumpFrame < JumpSpringIgnoreFrames) return;
             
-            rigidbody.AddForce(force, ForceMode.Acceleration);
+            var contraction = 1.0f - Grounded.hit.distance / groundCheckDistance;
+            var force = Vector3.up * (contraction * groundSpring - Rigidbody.velocity.y * groundDamper);
+            
+            Rigidbody.AddForce(force, ForceMode.Acceleration);
         }
 
         private void CheckForGround()
@@ -68,31 +82,38 @@ namespace Bosch.Bipedal
             var end = transform.position;
             if (Physics.Linecast(start, end, out var hit))
             {
-                grounded.Set(hit);
+                Grounded.Set(hit);
             }
             else
             {
-                grounded.Invalidate();
+                Grounded.Invalidate();
             }
         }
         
         private void Move()
         {
-            var current = rigidbody.velocity;
+            var current = Rigidbody.velocity;
             var target = MoveDirection * maxGroundSpeed;
             var diff = target - current;
             diff.y = 0.0f;
             var force = Vector3.ClampMagnitude(diff, maxGroundSpeed) / accelerationTime;
             
-            rigidbody.AddForce(force, ForceMode.Acceleration);
+            Rigidbody.AddForce(force, ForceMode.Acceleration);
         }
         
-        private void PerformJump(bool force = false)
+        private void ApplyJumpForce()
         {
-            if (!grounded && !force) return;
+            if (!Jump) return;
+            Jump = false;
 
-            var impulse = Vector3.up * (rigidbody.velocity.y + 2.0f * Gravity.y * jumpHeight);
-            rigidbody.AddForce(impulse, ForceMode.VelocityChange);
+            if (!CanJump) return;
+            
+            var yVel = Rigidbody.velocity.y;
+            var impulse = Vector3.up * Mathf.Sqrt(yVel * yVel + 2.0f * -Gravity.y * jumpHeight);
+            Rigidbody.AddForce(impulse, ForceMode.VelocityChange);
+            Debug.Log("test");
+            
+            lastJumpFrame = frame;
         }
 
         public class Ground

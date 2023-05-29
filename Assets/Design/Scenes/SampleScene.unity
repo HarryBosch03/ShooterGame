@@ -3379,7 +3379,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1344c3c82d62a2a41a3576d8abb8e3ea, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_Material: {fileID: 0}
+  m_Material: {fileID: 2100000, guid: 379018b03b7fda746a65a01d4f011d06, type: 2}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
@@ -3582,24 +3582,26 @@ MonoBehaviour:
     inputAsset: {fileID: -944628639613478452, guid: 4cf01486ec77087419522efbd900ee81, type: 3}
   movement:
     maxSpeed: 15
-    accelerationTime: 0.04
-    airAccelerationPenalty: 0.4
-    jumpHeight: 3
+    accelerationTime: 0.1
+    airAccelerationPenalty: 0.2
+    jumpHeight: 4
+    leap: 1
     airJumps: 1
-    jumpGravity: 2
+    jumpGravity: 3
     fallingGravity: 3
+    groundSpring: 500
+    groundDamper: 30
     groundTestDistance: 1
-    groundTestSkin: 0.3
+    groundTestSkin: 0.1
     groundTestRadius: 0.4
-    groundTestMaxSlope: 35
-    wallTestDistance: 0.6
-    wallTestIterations: 12
-    wallTestAngle: 20
+    groundTestMaxSlope: 46
+    wallTestDistance: 0.8
+    wallTestIterations: 64
     wallFriction: 0.5
     wallJumpHorizontalForce: 10
     wallJumpHeightPenalty: 0.8
-    groundSlamSpeed: 50
-    slidePenalty: 0.1
+    groundSlamSpeed: 30
+    slidePenalty: 0.3
   camera:
     mouseSensitivity: 0.3
     shakeAmplitude: 0.2
@@ -3623,7 +3625,7 @@ CapsuleCollider:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2133645716}
-  m_Material: {fileID: 0}
+  m_Material: {fileID: 13400000, guid: 35646494615cd3747ad0fead88b7573a, type: 2}
   m_IsTrigger: 0
   m_Enabled: 1
   m_Radius: 0.4

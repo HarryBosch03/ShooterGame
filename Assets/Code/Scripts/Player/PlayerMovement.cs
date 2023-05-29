@@ -10,6 +10,7 @@ namespace Bosch.Player
     public sealed class PlayerMovement
     {
         private const float Error = 0.01f;
+        private const int JumpSpringIgnoreFrames = 3;
 
         [SerializeField] private float maxSpeed = 15.0f;
         [SerializeField] private float accelerationTime = 0.1f;
@@ -17,9 +18,14 @@ namespace Bosch.Player
 
         [Space]
         [SerializeField] private float jumpHeight = 4.0f;
+        [SerializeField] [Range(0.0f, 1.0f)]private float leap = 1.0f;
         [SerializeField] private int airJumps = 1;
         [SerializeField] private float jumpGravity = 3.0f;
         [SerializeField] private float fallingGravity = 3.0f;
+        
+        [Space] 
+        [SerializeField] private float groundSpring;
+        [SerializeField] private float groundDamper;
 
         [Space]
         [SerializeField] private float groundTestDistance = 1.0f;
@@ -29,22 +35,20 @@ namespace Bosch.Player
 
         [Space]
         [SerializeField] private float wallTestDistance = 0.8f;
-        [SerializeField] private int wallTestIterations = 12;
-        [SerializeField] private float wallTestAngle = 20.0f;
+        [SerializeField] private int wallTestIterations = 64;
         [SerializeField] [Range(0.0f, 1.0f)] private float wallFriction = 0.5f;
         [SerializeField] private float wallJumpHorizontalForce = 10.0f;
         [SerializeField] private float wallJumpHeightPenalty = 0.8f;
 
-        [Space]
-        [SerializeField] private float groundSlamSpeed = 30.0f;
+        [Space] [SerializeField] private float groundSlamSpeed = 30.0f;
 
-        [Space] 
-        [SerializeField] [Range(0.0f, 1.0f)] private float slidePenalty = 0.3f;
-        
-        private Vector3 frameAcceleration;
+        [Space] [SerializeField] [Range(0.0f, 1.0f)]
+        private float slidePenalty = 0.3f;
+
+        private int frame;
+        private int lastJumpFrame;
 
         private int airJumpsLeft;
-
         private bool isGroundSlamming;
 
         private Collider[] colliders;
@@ -54,8 +58,8 @@ namespace Bosch.Player
 
         private List<Action> deferredCalls = new();
 
-        public PlayerAvatar Avatar { get; private set; }    
-        
+        public PlayerAvatar Avatar { get; private set; }
+        public Rigidbody Target { get; private set; }
 
         public PlayerInput.InputAxis2D MoveAction => Avatar.Input.Move;
         public PlayerInput.InputWrapper JumpAction => Avatar.Input.Jump;
@@ -71,16 +75,13 @@ namespace Bosch.Player
             }
         }
 
-        public float CurrentMovement => !Grounded ? 0.0f : (Velocity - Vector3.up * Vector3.Dot(Velocity, Vector3.up)).magnitude / maxSpeed;
+        public float GroundMovement => !Grounded ? 0.0f : (Velocity - Vector3.up * Vector3.Dot(Velocity, Vector3.up)).magnitude / maxSpeed;
 
-        public Vector3 Position
-        {
-            get => Avatar.transform.position;
-            private set => Avatar.transform.position = value;
-        }
+        public Vector3 Position => Target.position;
 
-        public Vector3 Velocity { get; private set; }
+        public Vector3 Velocity => Target.velocity;
         public bool Grounded { get; private set; }
+        public float GroundDistance { get; private set; }
 
         public bool OnWall { get; private set; }
         public RaycastHit WallHit { get; private set; }
@@ -94,23 +95,27 @@ namespace Bosch.Player
             Mathf.Sqrt(RelativeVelocity.x * RelativeVelocity.x + RelativeVelocity.z * RelativeVelocity.z);
 
         public float MaxSpeed => maxSpeed;
-        
+
         public bool Sliding { get; private set; }
 
         public void Initialize(PlayerAvatar avatar)
         {
+            Target = avatar.gameObject.GetOrAddComponent<Rigidbody>();
+            Target.constraints = RigidbodyConstraints.FreezeRotation;
+            Target.interpolation = RigidbodyInterpolation.Interpolate;
+            Target.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+
             Avatar = avatar;
             colliders = avatar.GetComponentsInChildren<Collider>();
         }
 
         public void FixedUpdate()
         {
-            frameAcceleration = Gravity;
-
             ResetState();
             PerformChecks();
             FixedUpdateActions();
-            PhysicsStuff();
+
+            frame++;
         }
 
         private void ResetState()
@@ -131,45 +136,47 @@ namespace Bosch.Player
             if (Grounded) return;
             if (isGroundSlamming) return;
 
-            var direction = WorldDirection;
-            var l = direction.magnitude;
-            direction /= l;
-            if (l < 0.2f) return;
-
-            var found = false;
-            var hit = new RaycastHit();
+            var hits = new List<RaycastHit>();
             for (var i = 0; i < wallTestIterations * 2 + 1; i++)
             {
-                // ReSharper disable once PossibleLossOfFraction
-                var a = ((i + 1) / 2) / (float)wallTestIterations * wallTestAngle * (i % 2 == 0 ? -1.0f : 1.0f);
-                var d = Quaternion.Euler(0.0f, a, 0.0f) * direction;
+                var a = i / (float)wallTestIterations * Mathf.PI * 2.0f;
+                var d = new Vector3(Mathf.Cos(a), 0.0f, Mathf.Sin(a));
                 var ray = new Ray(Position, d);
 
-                if (!Physics.Raycast(ray, out hit, wallTestDistance))
-                {
-                    Debug.DrawRay(Position, d.normalized * wallTestDistance, Color.red);
-                    continue;
-                }
+                if (!Physics.Raycast(ray, out var hit, wallTestDistance)) continue;
 
-                Debug.DrawRay(Position, d.normalized * wallTestDistance, Color.green);
-                found = true;
-                break;
+                hits.Add(hit);
             }
 
-            if (!found) return;
+            if (hits.Count == 0) return;
 
+            var best = hits.Best(e => 1.0f / e.distance);
             OnWall = true;
-            WallHit = hit;
+            WallHit = best;
 
-            if (Velocity.y < 0.0f) frameAcceleration.y += -Velocity.y / Time.deltaTime * wallFriction;
+            if (Velocity.y < 0.0f) Target.AddForce(Vector3.up * -Velocity.y / Time.deltaTime * wallFriction, ForceMode.Acceleration);
         }
 
         private void FixedUpdateActions()
         {
             Move();
-
+            
             foreach (var call in deferredCalls) call();
             deferredCalls.Clear();
+            
+            ApplySpringForce();
+            Target.AddForce(Gravity, ForceMode.Acceleration);
+        }
+
+        private void ApplySpringForce()
+        {
+            if (!Grounded) return;
+            if (frame - lastJumpFrame < JumpSpringIgnoreFrames) return;
+            
+            var contraction = GroundDistance / groundTestDistance;
+            var force = Vector3.up * (contraction * groundSpring - Target.velocity.y * groundDamper);
+            
+            Target.AddForce(force, ForceMode.Acceleration);
         }
 
         private void StartSlam()
@@ -178,12 +185,6 @@ namespace Bosch.Player
             if (Grounded) return;
 
             isGroundSlamming = true;
-        }
-
-        private void PhysicsStuff()
-        {
-            Integrate();
-            Depenetrate();
         }
 
         private void CheckForGround()
@@ -203,15 +204,13 @@ namespace Bosch.Player
                 if (Mathf.Acos(result.normal.y) > groundTestMaxSlope * Mathf.Deg2Rad) continue;
 
                 Grounded = true;
+                GroundDistance = distance;
                 airJumpsLeft = airJumps;
 
                 if (result.rigidbody)
                 {
                     groundVelocity = result.rigidbody ? result.rigidbody.velocity : Vector3.zero;
                 }
-
-                if (Velocity.y <= Error) Position += Vector3.up * (distance - skin);
-                if (Velocity.y < 0.0f) Velocity = new Vector3(Velocity.x, 0.0f, Velocity.z);
 
                 groundHit = result;
                 return;
@@ -227,17 +226,19 @@ namespace Bosch.Player
                 Slam();
                 return;
             }
+
             if (!Grounded)
             {
                 AirStrafe(airAccelerationPenalty);
                 return;
             }
+
             if (SlideAction.Pressed)
             {
                 AirStrafe(slidePenalty);
                 return;
             }
-            
+
             var acceleration = 1.0f / accelerationTime;
 
             var target = WorldDirection * maxSpeed;
@@ -248,8 +249,8 @@ namespace Bosch.Player
 
             var force = diff * acceleration;
 
-            frameAcceleration += force;
-            frameAcceleration += groundVelocity;
+            Target.AddForce(force, ForceMode.Acceleration);
+            Target.AddForce(groundVelocity, ForceMode.Acceleration);
         }
 
         private void AirStrafe(float penalty)
@@ -257,7 +258,7 @@ namespace Bosch.Player
             var force = WorldDirection * maxSpeed / accelerationTime * penalty;
             var dot = Vector3.Dot(WorldDirection.normalized, Velocity);
             force *= Mathf.Clamp01(1.0f - dot / maxSpeed);
-            frameAcceleration += force;
+            Target.AddForce(force, ForceMode.Acceleration);
             Sliding = true;
         }
 
@@ -270,8 +271,7 @@ namespace Bosch.Player
                 return;
             }
 
-            frameAcceleration = Vector3.zero;
-            Velocity = Vector3.down * groundSlamSpeed;
+            Target.AddForce(Vector3.down * groundSlamSpeed - Target.velocity, ForceMode.VelocityChange);
         }
 
         private void Jump()
@@ -288,10 +288,20 @@ namespace Bosch.Player
                 else return;
             }
 
-            var jumpForce = Mathf.Sqrt(2.0f * -Physics.gravity.y * jumpGravity * jumpHeight);
-            frameAcceleration += Vector3.up * jumpForce / Time.deltaTime;
+            var verticalForce = Mathf.Sqrt(2.0f * -Physics.gravity.y * jumpGravity * jumpHeight);
+            var force = new Vector3(WorldDirection.x * maxSpeed, verticalForce, WorldDirection.z * maxSpeed);
 
-            if (Velocity.y < 0.0f) frameAcceleration += Vector3.up * -Velocity.y / Time.deltaTime;
+            var contraction = Mathf.Min(1.0f, maxSpeed / new Vector2(Target.velocity.x, Target.velocity.z).magnitude);
+            force.x -= Target.velocity.x * contraction;
+            force.z -= Target.velocity.z * contraction;
+            
+            force.y -= Target.velocity.y;
+            
+            force.x *= leap;
+            force.z *= leap;
+            
+            Target.AddForce(force, ForceMode.VelocityChange);
+            lastJumpFrame = frame;
         }
 
         private void WallJump()
@@ -310,56 +320,10 @@ namespace Bosch.Player
             var jumpForce = Mathf.Sqrt(2.0f * -Physics.gravity.y * jumpGravity * jumpHeight);
             var impulse = direction * wallJumpHorizontalForce + Vector3.up * jumpForce * wallJumpHeightPenalty;
 
-            frameAcceleration += impulse / Time.deltaTime;
-            if (Velocity.y < 0.0f) frameAcceleration += Vector3.up * -Velocity.y / Time.deltaTime;
+            Target.AddForce(impulse, ForceMode.VelocityChange);
+            if (Velocity.y < 0.0f) Target.AddForce(Vector3.up * -Velocity.y, ForceMode.VelocityChange);
         }
-
-        private void Depenetrate()
-        {
-            var others = GetBroadPhase();
-
-            foreach (var self in colliders)
-            {
-                foreach (var other in others)
-                {
-                    if (other.transform.IsChildOf(Avatar.transform)) continue;
-
-                    if (!Physics.ComputePenetration(self, self.transform.position, self.transform.rotation, other,
-                            other.transform.position, other.transform.rotation, out var direction,
-                            out var distance)) continue;
-
-                    Position += direction * distance;
-                    var dot = Vector3.Dot(direction, Velocity);
-                    if (dot < 0.0f) Velocity -= direction * dot;
-                }
-            }
-        }
-
-        private Collider[] GetBroadPhase()
-        {
-            var bounds = GetBounds();
-            return Physics.OverlapBox(bounds.center, bounds.extents);
-        }
-
-        public Bounds GetBounds()
-        {
-            var bounds = colliders[0].bounds;
-            foreach (var self in colliders)
-            {
-                bounds.Encapsulate(self.bounds);
-            }
-
-            bounds.Expand(Error);
-            return bounds;
-        }
-
-        private void Integrate()
-        {
-            Position += Velocity * Time.deltaTime;
-            Velocity += frameAcceleration * Time.deltaTime;
-            Avatar.transform.position = Position;
-        }
-
+        
         public void Update()
         {
             Avatar.transform.position = Position;

@@ -59,5 +59,22 @@ namespace Bosch
         {
             return gameObject.TryGetComponent(out T component) ? component : gameObject.AddComponent<T>();
         }
+
+        public static T Best<T>(this IEnumerable<T> list, Func<T, float> scoringCallback, float startingScore = float.MinValue, T fallback = default)
+        {
+            var best = fallback;
+            var bestScore = startingScore;
+
+            foreach (var element in list)
+            {
+                var score = scoringCallback(element);
+                if (score < bestScore) continue;
+
+                best = element;
+                bestScore = score;
+            }
+
+            return best;
+        }
     }
 }
