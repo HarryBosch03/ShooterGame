@@ -85,7 +85,7 @@ Shader "Custom/Viewport Weapon"
             float4 _MainTex_ST;
             float _UIMaskSoftnessX;
             float _UIMaskSoftnessY;
-
+            
             Varyings vert(Attributes input)
             {
                 Varyings OUT;
@@ -107,6 +107,8 @@ Shader "Custom/Viewport Weapon"
                 return OUT;
             }
 
+            int _Passthrough;
+            
             float4 frag(Varyings IN) : SV_Target
             {
                 //Round up the alpha color coming from the interpolator (to 1.0/256.0 steps)
@@ -121,14 +123,27 @@ Shader "Custom/Viewport Weapon"
 
                 if (tex.a * 255.0 <= 1.0)
                 {
-                    half4 a = tex2D(_MainTex, IN.texcoord + float2( 1,  0) * _MainTex_TexelSize.xy);
-                    half4 b = tex2D(_MainTex, IN.texcoord + float2( 0,  1) * _MainTex_TexelSize.xy);
-                    half4 c = tex2D(_MainTex, IN.texcoord + float2(-1,  0) * _MainTex_TexelSize.xy);
-                    half4 d = tex2D(_MainTex, IN.texcoord + float2( 0, -1) * _MainTex_TexelSize.xy);
-
-                    if ((a.a + b.a + c.a + d.a) * 255 >= 1)
+                    float2 corners[4] =
                     {
-                        color = _OutlineColor;
+                        float2( 1,  0),    
+                        float2( 0,  1),    
+                        float2(-1,  0),    
+                        float2( 0, -1),    
+                    };
+
+                    int c = 0;
+                    half4 outlineColor = 0;
+                    for (int i = 0; i < 4; i++)
+                    {
+                        half4 sample = tex2D(_MainTex, IN.texcoord + corners[i] * _MainTex_TexelSize.xy);
+                        if (sample.a * 255 < 1) continue;
+                        c++;
+                        outlineColor += sample;
+                    }
+
+                    if (c > 0)
+                    {
+                        color = outlineColor * _OutlineColor / c;
                     }
                 }
 

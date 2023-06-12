@@ -1965,8 +1965,9 @@ GameObject:
   - component: {fileID: 819691933}
   - component: {fileID: 819691935}
   - component: {fileID: 819691934}
+  - component: {fileID: 819691936}
   m_Layer: 0
-  m_Name: FP Camera
+  m_Name: Viewport Camera
   m_TagString: MainCamera
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -2063,6 +2064,19 @@ Camera:
   m_OcclusionCulling: 1
   m_StereoConvergence: 10
   m_StereoSeparation: 0.022
+--- !u!114 &819691936
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 819691932}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 37f92045148b21243a8c6b9838357e57, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  framerate: 12
 --- !u!1 &826773817
 GameObject:
   m_ObjectHideFlags: 0

@@ -4,6 +4,7 @@ Shader "Unlit/Uber"
     {
         _MainTex ("Texture", 2D) = "white" {}
         _Color("Color", Color) = (1, 1, 1, 1)
+        _Wobble("Vertex Wobble", float) = 100.0
     }
     SubShader
     {
@@ -49,6 +50,8 @@ Shader "Unlit/Uber"
             float4 _MainTex_ST;
             CBUFFER_END
 
+            float _Wobble;
+
             Varyings vert(Attributes input)
             {
                 Varyings output;
@@ -62,6 +65,8 @@ Shader "Unlit/Uber"
                 output.uv = TRANSFORM_TEX(input.uv, _MainTex);
                 output.normal = TransformObjectToWorldNormal(input.normal);
 
+                output.vertex.xy = round(output.vertex.xy / output.vertex.w * _Wobble) / _Wobble * output.vertex.w;
+                
                 return output;
             }
 
@@ -83,7 +88,7 @@ Shader "Unlit/Uber"
                 surfaceData.albedo = col;
 
                 float4 final = UniversalFragmentBlinnPhong(inputData, surfaceData);
-                final.rgb += half3(unity_SHAr.w, unity_SHAg.w, unity_SHAb.w);
+                final.rgb += surfaceData.albedo * half3(unity_SHAr.w, unity_SHAg.w, unity_SHAb.w);
                 
                 return final; 
             }
